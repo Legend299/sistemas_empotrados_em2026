@@ -55,8 +55,6 @@ void loop() {
 }
 ```
 
-> Nota: El sketch anterior es el que proporcionaste; más abajo explicamos cada parámetro y la forma correcta recomendada de usar LEDC.
-
 ## Explicación detallada de parámetros PWM
 
 - Frecuencia (`freq`):
