@@ -34,12 +34,12 @@ El programa hace lo siguiente:
 ## Diagrama de conexión
 Imagen del diagrama de Tinkercad y el enlace al proyecto en Tinkercad:
 
-- Imagen del diagrama: `./img/tinkercad_diagram.png`
+- ![Imagen del diagrama](./img/tinkercad_diagram.png "Imagen del diagrama.")
 - Enlace a Tinkercad: https://www.tinkercad.com/things/2nKtMK5MIPY-1leddigital?sharecode=pX9LFTpKYWoREUY1aIF6_ApNUSlEYM1kqun8cxmG2XQ
 
 ## Foto del montaje real
 
-- Foto : `./img/foto_esp32_conexion.jpeg`
+- ![Foto](./img/foto_esp32_conexion.jpeg "Foto del Esp32.")
 
 ## Cómo subir el sketch
 1. Abre Arduino IDE.
