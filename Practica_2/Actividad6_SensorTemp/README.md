@@ -80,7 +80,7 @@ El programa realiza lo siguiente:
    - Conecta un buzzer pasivo al ESP32 (por ejemplo, al pin 22).
    - Haz que suene una melodía o un beep cuando la temperatura supere cierto umbral (rango).
    - Espacio para imagen:
-     - ![Foto](./img/buzzer_pasivo.jpg "Buzzer pasivo conectado al ESP32.")
+     - ![Foto](./img/buzzer_pasivo.JPG "Buzzer pasivo conectado al ESP32.")
 
 3. **Indicadores LED para temperatura**
    - Conecta tres LEDs al ESP32 para indicar el estado:
