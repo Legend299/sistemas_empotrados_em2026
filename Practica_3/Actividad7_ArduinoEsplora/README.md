@@ -21,7 +21,7 @@ El programa realiza lo siguiente:
 	#include <Esplora.h>
 	#include <SoftwareSerial.h>
 	```
-- ![Imagen del proyecto](./img/libreria_esplora.jpg "Libreria esplora.")
+- ![Imagen de la libreria](./img/libreria_esplora.png "Libreria esplora.")
 
 2. Define los pines de conexión del ESP32 con la pantalla Nokia 5110 y la recepción serial:
 	```cpp
