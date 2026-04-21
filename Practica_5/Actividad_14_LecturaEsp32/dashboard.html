@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Monitor DHT11 – ESP32</title>
+  </head>
+  <body>
+    <header>
+      <h1>Monitor de Temperatura y Humedad</h1>
+      <p>Sensor DHT11 via ESP-NOW</p>
+    </header>
+
+    <main>
+      <section id="seccion-conexion">
+        <button id="btn-conectar" onclick="toggleConexion()">
+          Conectar ESP32
+        </button>
+        <p id="estado-conexion">Desconectado</p>
+      </section>
+
+      <section id="seccion-datos">
+        <div id="tarjeta-temperatura">
+          <h2>Temperatura</h2>
+          <p>
+            <span id="valor-temperatura">--</span>
+            <span>°C</span>
+          </p>
+        </div>
+
+        <div id="tarjeta-humedad">
+          <h2>Humedad</h2>
+          <p>
+            <span id="valor-humedad">--</span>
+            <span>%</span>
+          </p>
+        </div>
+      </section>
+
+      <section id="seccion-historial">
+        <h2>Historial de lecturas</h2>
+        <table id="tabla-historial">
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Temperatura (°C)</th>
+              <th>Humedad (%)</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpo-historial">
+            <!-- esta info se agrega desde javascript -->
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer></footer>
+
+    <script>
+      let port = null;
+      let reader = null;
+      let leyendo = false;
+      const MAX_FILAS = 15;
+
+      async function toggleConexion() {
+        if (port) {
+          await desconectar();
+        } else {
+          await conectar();
+        }
+      }
+
+      async function conectar() {
+        try {
+          port = await navigator.serial.requestPort();
+          await port.open({ baudRate: 115200 });
+
+          document.getElementById("btn-conectar").textContent = "Desconectar";
+          actualizarEstado("Conectado");
+
+          leyendo = true;
+          leerSerial();
+        } catch (err) {
+          actualizarEstado("Error al conectar: " + err.message);
+          port = null;
+        }
+      }
+
+      async function desconectar() {
+        leyendo = false;
+        try {
+          if (reader) {
+            await reader.cancel();
+            reader = null;
+          }
+          if (port) {
+            await port.close();
+            port = null;
+          }
+        } catch (_) {}
+
+        document.getElementById("btn-conectar").textContent = "Conectar ESP32";
+        actualizarEstado("Desconectado");
+      }
+
+      async function leerSerial() {
+        const decoder = new TextDecoderStream();
+        const inputDone = port.readable.pipeTo(decoder.writable);
+        const inputStream = decoder.readable;
+
+        reader = inputStream.getReader();
+        let buffer = "";
+
+        try {
+          while (leyendo) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (!value) continue;
+
+            buffer += value;
+            const lineas = buffer.split("\n");
+            buffer = lineas.pop();
+
+            for (const linea of lineas) {
+              procesarLinea(linea.trim());
+            }
+          }
+        } catch (err) {
+          if (leyendo) actualizarEstado("Conexión perdida: " + err.message);
+        } finally {
+          reader.releaseLock();
+        }
+      }
+
+      function procesarLinea(linea) {
+        if (!linea.startsWith("{")) return;
+
+        try {
+          const obj = JSON.parse(linea);
+
+          if (obj.status) {
+            actualizarEstado("ESP32 listo — esperando datos del sensor...");
+            return;
+          }
+
+          if (obj.error) {
+            actualizarEstado("Error en el ESP32: " + obj.error);
+            return;
+          }
+
+          if (obj.t !== undefined && obj.h !== undefined) {
+            const temp = obj.t.toFixed(1);
+            const hum = obj.h.toFixed(1);
+
+            document.getElementById("valor-temperatura").textContent = temp;
+            document.getElementById("valor-humedad").textContent = hum;
+
+            actualizarEstado("Recibiendo datos");
+            agregarFilaHistorial(temp, hum);
+          }
+        } catch (_) {
+          console.log("JSON no válido");
+        }
+      }
+
+      function agregarFilaHistorial(temp, hum) {
+        const tbody = document.getElementById("cuerpo-historial");
+        const hora = new Date().toLocaleTimeString("es-MX");
+
+        const fila = document.createElement("tr");
+        fila.innerHTML = `<td>${hora}</td><td>${temp}</td><td>${hum}</td>`;
+        tbody.insertBefore(fila, tbody.firstChild);
+
+        if (tbody.rows.length > MAX_FILAS) {
+          tbody.deleteRow(tbody.rows.length - 1);
+        }
+      }
+
+      function actualizarEstado(texto) {
+        document.getElementById("estado-conexion").textContent = texto;
+      }
+    </script>
+  </body>
+</html>
