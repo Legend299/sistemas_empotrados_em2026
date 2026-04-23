@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prediccion de Temperatura - ESP32</title>
+  </head>
+  <body>
+
+    <h1>Prediccion de Temperatura con Regresion Lineal</h1>
+    <p>ESP-NOW + Web Serial API</p>
+
+    <button id="btn-conectar" onclick="toggleConexion()">Conectar ESP32</button>
+    <span id="estado-conexion">Desconectado</span>
+
+    <h2>Datos actuales</h2>
+
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>Campo</th>
+        <th>Valor</th>
+      </tr>
+      <tr>
+        <td>Temperatura actual (C)</td>
+        <td id="valor-temperatura">--</td>
+      </tr>
+      <tr>
+        <td>Humedad actual (%)</td>
+        <td id="valor-humedad">--</td>
+      </tr>
+      <tr>
+        <td>Pendiente m</td>
+        <td id="valor-m">--</td>
+      </tr>
+      <tr>
+        <td>Intercepto b</td>
+        <td id="valor-b">--</td>
+      </tr>
+      <tr>
+        <td>Prediccion a 2 minutos (C)</td>
+        <td id="pred-2min">--</td>
+      </tr>
+      <tr>
+        <td>Prediccion a 5 minutos (C)</td>
+        <td id="pred-5min">--</td>
+      </tr>
+      <tr>
+        <td>Muestras usadas</td>
+        <td id="valor-n">--</td>
+      </tr>
+    </table>
+
+    <h2>Historial de lecturas</h2>
+
+    <!--
+      Implementacion 4:
+      Agrega aqui la tabla de historial con las columnas:
+        Hora | Temp (C) | Humedad (%) | m | b | Pred 2min | Pred 5min | n
+
+      El tbody debe tener id="cuerpo-historial".
+      En el script, crea la funcion agregarFilaHistorial(d) y llamala
+      desde procesarLinea() cada vez que llegue un dato valido.
+    -->
+
+    <script>
+      let port, reader, leyendo = false;
+      let buffer = "";
+
+      async function toggleConexion() {
+        if (leyendo) {
+          await desconectar();
+        } else {
+          await conectar();
+        }
+      }
+
+      async function conectar() {
+        try {
+          port = await navigator.serial.requestPort();
+          await port.open({ baudRate: 115200 });
+          leyendo = true;
+          document.getElementById("estado-conexion").textContent = "Conectado";
+          document.getElementById("btn-conectar").textContent = "Desconectar";
+          leerSerial();
+        } catch (e) {
+          document.getElementById("estado-conexion").textContent = "Error: " + e.message;
+        }
+      }
+
+      async function desconectar() {
+        leyendo = false;
+        try { if (reader) await reader.cancel(); } catch (_) {}
+        try { await port.close(); } catch (_) {}
+        document.getElementById("estado-conexion").textContent = "Desconectado";
+        document.getElementById("btn-conectar").textContent = "Conectar ESP32";
+      }
+
+      async function leerSerial() {
+        const decoder = new TextDecoderStream();
+        port.readable.pipeTo(decoder.writable);
+        reader = decoder.readable.getReader();
+
+        while (leyendo) {
+          try {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += value;
+            let nl;
+            while ((nl = buffer.indexOf("\n")) !== -1) {
+              const linea = buffer.substring(0, nl).trim();
+              buffer = buffer.substring(nl + 1);
+              procesarLinea(linea);
+            }
+          } catch (e) {
+            if (leyendo) {
+              document.getElementById("estado-conexion").textContent = "Error de lectura: " + e.message;
+            }
+            break;
+          }
+        }
+      }
+
+      function procesarLinea(linea) {
+        try {
+          const d = JSON.parse(linea);
+
+          if (d.status || d.error) return;
+          if (d.t === undefined) return;
+
+          document.getElementById("valor-temperatura").textContent = d.t.toFixed(1);
+          document.getElementById("valor-humedad").textContent     = d.h.toFixed(1);
+          document.getElementById("valor-m").textContent           = d.m.toFixed(4);
+          document.getElementById("valor-b").textContent           = d.b.toFixed(2);
+          document.getElementById("pred-2min").textContent         = d.pred_2min.toFixed(1);
+          document.getElementById("pred-5min").textContent         = d.pred_5min.toFixed(1);
+          document.getElementById("valor-n").textContent           = d.n;
+
+        } catch (_) {}
+      }
+    </script>
+
+  </body>
+</html>
